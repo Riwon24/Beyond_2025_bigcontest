@@ -2,12 +2,16 @@ def get_strategies(store, percentile):
     strategies = []
 
     # 🧭 1. 고객군 / 단골 & 신규 유입 관련 전략 분기
-    
+
     # 1(1) 재방문율
-    if metrics.get("재방문율") is not None and metrics["재방문율"] >= 60:
-        strategies.append("💎 재방문율이 높습니다. 단골 리워드, 후기 이벤트, 생일 쿠폰 등 유지 전략이 적합합니다.")
-    elif metrics.get("재방문율") is not None and metrics["재방문율"] < 60:
-        strategies.append("📉 재방문율이 낮습니다. 충성 고객 유지를 위한 혜택 강화가 필요합니다.")
+    reu = metrics.get("재방문율")
+    if reu is not None:
+        if reu >= 60:
+            strategies.append("💎 재방문율이 높습니다. 단골 리워드, 후기 이벤트, 생일 쿠폰 등 유지 전략이 적합합니다.")
+        elif reu < 30:
+            strategies.append("⚠️ 재방문율이 30% 이하로, 방문 고객의 대부분이 단발성입니다. 멤버십, 적립, 리워드 등의 전략을 우선 고려하세요.")
+        else:
+            strategies.append("📉 재방문율이 낮습니다. 충성 고객 유지를 위한 혜택 강화가 필요합니다.")
 
     # 1(2) 단골손님 (재방문 고객 비중)
     if metrics.get("재방문 고객 비중") is not None and metrics["재방문 고객 비중"] >= 60:
