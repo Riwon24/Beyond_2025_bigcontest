@@ -5,6 +5,61 @@ import streamlit as st
 import uuid
 from column_descriptions import COLUMN_DESCRIPTIONS
 
+# 6번 그래프 함수
+def make_dual_rank_bar_vertical(ry_value, bzn_value):
+    fig = go.Figure()
+
+    fig.update_yaxes(autorange="reversed")
+
+    # 배경 색상 구간 (세로로 4개 블럭)
+    fig.add_trace(go.Bar(
+        y=[25, 25, 25, 25],
+        x=["순위 비율 (%)"] * 4,
+        width=[0.5] * 4,
+        orientation='v',
+        marker=dict(color=["#b3ffb3", "#ffffcc", "#ffe6cc", "#ffcccc"]),
+        hoverinfo='none',
+        showlegend=False
+    ))
+
+    # 업종 내 순위 마커
+    fig.add_trace(go.Scatter(
+        y=[ry_value],
+        x=["순위 비율 (%)"],
+        mode="markers+text",
+        marker=dict(color="#5B2C6F", size=18, symbol="diamond"),
+        text=[f"{ry_value:.0f}%"],
+        textposition="middle right",
+        name="업종 내 순위"
+    ))
+
+    # 상권 내 순위 마커
+    fig.add_trace(go.Scatter(
+        y=[bzn_value],
+        x=["순위 비율 (%)"],
+        mode="markers+text",
+        marker=dict(color="#BB8FCE", size=18, symbol="diamond"),
+        text=[f"{bzn_value:.0f}%"],
+        textposition="middle right",
+        name="상권 내 순위"
+    ))
+
+    # 레이아웃 조정
+    fig.update_layout(
+        yaxis=dict(
+            range=[0, 100],
+            title="순위 비율 (%)",
+            tickmode='linear',
+            dtick=25
+        ),
+        xaxis=dict(showticklabels=False),
+        height=400,
+        margin=dict(t=40, b=40, l=60, r=40),
+        legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5)
+    )
+
+    return fig
+
 def display_store_insights(store_row):
     graphs = []
 
@@ -106,25 +161,14 @@ def display_store_insights(store_row):
         graphs.append(("📈 업종 평균 대비 성과", fig))
 
     # 6. 순위 지표
-    rank_cols = {
-        "업종 내 순위 비율": "m12_sme_ry_saa_pce_rt",
-        "상권 내 순위 비율": "m12_sme_bzn_saa_pce_rt"
-    }
-    rank_data = {k: store_row.get(v) for k, v in rank_cols.items() if store_row.get(v) not in [None, -999999.9]}
-    if rank_data:
-        df = pd.DataFrame(list(rank_data.items()), columns=["구분", "순위"])
-        fig = px.bar(
-            df, x="순위", y="구분", orientation="h",
-            color="구분",
-            color_discrete_map={
-                "업종 내 순위 비율": "#5B2C6F",
-                "상권 내 순위 비율": "#BB8FCE"
-            }
-        )
-        fig.update_layout(showlegend=False, bargap=0.5)
-        graphs.append(("📉 업종/상권 내 순위 (낮을수록 상위)", fig))
+    rank_ry = store_row.get("m12_sme_ry_saa_pce_rt")
+    rank_bzn = store_row.get("m12_sme_bzn_saa_pce_rt")
 
-    # ✅ 병렬 출력 (각 그래프는 한 번만 렌더링)
+    if all(v not in [None, -999999.9] for v in [rank_ry, rank_bzn]):
+        fig_rank_vertical = make_dual_rank_bar_vertical(rank_ry, rank_bzn)
+        graphs.append(("🏆 업종/상권 내 순위 (비율 낮을수록 상위)", fig_rank_vertical))
+
+    # 병렬 출력 (각 그래프는 한 번만 렌더링)
     cols_per_row = 3 if len(graphs) >= 3 else 2
     for i in range(0, len(graphs), cols_per_row):
         row_graphs = graphs[i:i + cols_per_row]
