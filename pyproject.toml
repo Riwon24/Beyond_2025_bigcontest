@@ -1,20 +1,20 @@
 [project]
-name = "Datetective_shcard_2025_bigcontest_chatbot"
+name = "datetective_shcard_2025_bigcontest-chatbot"
 version = "0.1.0"
-description = "탐정 D의 마케팅 수사노트"
-authors = [{ name = "Chaeyoung Lee, Riwon Kim, Seoyoung Choi" }]
-readme = "README.md"
-requires-python = ">=3.11"
-license = { text = "MIT" }
-
+description = "AI 마케팅 전략 탐정 챗봇"
+authors = [{name = "chaeyoung"}]
 dependencies = [
     "streamlit==1.47.0",
-    "pandas>=2.0.0",
-    "plotly>=5.0.0",
-    "python-dotenv>=1.0.0",
-    "langchain>=0.1.0",
-    "langchain-google-genai>=0.0.8",
-    "reportlab>=4.0.0",
-    "markdown>=3.0.0",
+    "pandas",
+    "plotly",
+    "markdown",
+    "reportlab",
+    "python-dotenv",
+    "langchain",
+    "langchain-google-genai",
+    "fastmcp",
 ]
+requires-python = ">=3.10"
 
+[tool.uv]
+virtual = true
