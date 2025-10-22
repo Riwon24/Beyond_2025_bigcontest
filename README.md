@@ -50,7 +50,7 @@
 ```bash
 main/
 ├── streamlit_app.py            # Streamlit 메인 앱
-├── data_loader.py              # 매장 및 상권 데이터 로딩
+├── mcp_server.py               # FastMCP 기반 마케팅 분석 서버 (Gemini LLM 호출)
 ├── visualization.py            # 단서 그래프(Plotly) 생성
 ├── column_descriptions.py      # 주요 컬럼 설명 딕셔너리
 ├── .env                        # Gemini API Key 저장
