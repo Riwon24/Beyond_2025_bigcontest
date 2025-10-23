@@ -7,15 +7,37 @@
 ---
 
 ## 실행 결과 (서비스 웹 페이지)
-(링크추가)
+https://noonbora2025bigcontest.onrender.com/
 
 ---
 
-## 👥 눈보라
+## 👥 팀 소개  
+> ❄️ 팀명 : 눈보라
+
+<div align="center">
 
 | <img src="https://github.com/chaeyylee.png" width="80"/><br>**이채영 (팀장)**<br>[chaeyylee](https://github.com/chaeyylee) | <img src="https://github.com/Riwon24.png" width="80"/><br>**김리원**<br>[Riwon24](https://github.com/Riwon24) | <img src="https://github.com/Osssai-52.png" width="80"/><br>**최서영**<br>[Osssai-52](https://github.com/Osssai-52) |
-|:---------------------------------------------------------------------------------------------------------------------:|:--:|:--:|
-|                                              UI 디자인<br> 전략 생성 & 프롬프트 설계                                               |  데이터 전처리 & 구조화 |  챗봇 로직 구현<br> 발표 자료 제작 |
+|:----------------------------------------------------------------------------------------------------------------------------------:|:----------------------------------------------------------------------------------------------:|:--------------------------------------------------------------------------------------------------:|
+| UI 디자인<br>전략 생성 & 프롬프트 설계 | 데이터 전처리 & 구조화 | 챗봇 로직 구현<br>발표 자료 제작 |
+
+</div>
+
+---
+
+## 🖥️ 실행 화면
+
+![img_3.png](pictures_for_README/img_3.png)
+![img_4.png](pictures_for_README/img_4.png)
+![img_5.png](pictures_for_README/img_5.png)
+![img_6.png](pictures_for_README/img_6.png)
+![img_7.png](pictures_for_README/img_7.png)
+![img_8.png](pictures_for_README/img_8.png)
+![img_9.png](pictures_for_README/img_9.png)
+![img_10.png](pictures_for_README/img_10.png)
+![img_11.png](pictures_for_README/img_11.png)
+![img_12.png](pictures_for_README/img_12.png)
+![img_13.png](pictures_for_README/img_13.png)
+![img_14.png](pictures_for_README/img_14.png)
 
 ---
 
