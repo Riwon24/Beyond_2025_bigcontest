@@ -89,5 +89,5 @@ NEW_COLUMN = 'new_area_with_public'
 df[NEW_COLUMN] = df[SOURCE_COLUMN].map(final_mapping_dict)
 
 
-# 최종 결과를 새로운 CSV 파일로 저장
-df.to_csv('real_final_set_f.csv', index=False, encoding='cp949')
+# 최종 결과 저장
+df.to_csv('main_set_f.csv', index=False, encoding='cp949')
