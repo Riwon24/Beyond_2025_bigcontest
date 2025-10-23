@@ -1,7 +1,10 @@
-streamlit
+streamlit==1.47.0
 pandas
+plotly
+markdown
+python-dotenv
 reportlab
 langchain
 langchain-google-genai
-python-dotenv
-plotly
+google-generativeai
+fastmcp

@@ -1,0 +1,20 @@
+[project]
+name = "datetective_shcard_2025_bigcontest-chatbot"
+version = "0.1.0"
+description = "AI 마케팅 전략 탐정 챗봇"
+authors = [{name = "chaeyoung"}]
+dependencies = [
+    "streamlit==1.47.0",
+    "pandas",
+    "plotly",
+    "markdown",
+    "reportlab",
+    "python-dotenv",
+    "langchain",
+    "langchain-google-genai",
+    "fastmcp",
+]
+requires-python = ">=3.10"
+
+[tool.uv]
+virtual = true

@@ -1,110 +1,192 @@
 import pandas as pd
-from data_loader import load_store_data
-from strategy_rules import get_strategies
-from gemini_client import generate_gemini_caption
+from typing import List, Dict, Any, Optional
+from langchain.schema import HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
+import os
 
-def analyze_store(store_name):
-    store, df = load_store_data(store_name)
-    df.columns = df.columns.str.lower()
-    store = store.rename(str.lower)
+# FastMCP 구조 사용을 위한 서버 설정
+from fastmcp.server import FastMCP, Context
 
-    # 경쟁 매장 필터링
-    competitors = df[
-        (df["hpsn_mct_zcd_nm"] == store["hpsn_mct_zcd_nm"]) &
-        (df["hpsn_mct_bzn_cd_nm"] == store["hpsn_mct_bzn_cd_nm"]) &
-        (df["ta_ym"] == store["ta_ym"]) &
-        (df["mct_nm"] != store_name)
-    ]
-
-    # 주요 지표 비교
-    metrics = {
-        "배달비율": (store["dlv_saa_rat"], competitors["dlv_saa_rat"].mean()),
-        "재방문율": (store["mct_ue_cln_reu_rat"], competitors["mct_ue_cln_reu_rat"].mean()),
-        "신규고객비율": (store["mct_ue_cln_new_rat"], competitors["mct_ue_cln_new_rat"].mean()),
-    }
-
-    # Percentile 계산 (SV = -999999.9 제외)
-    percentiles = {}
-    for label, col in {
-        "배달비율": "dlv_saa_rat",
-        "재방문율": "mct_ue_cln_reu_rat",
-        "신규고객": "mct_ue_cln_new_rat"
-    }.items():
-        try:
-            comp_values = competitors[competitors[col] != -999999.9][col]
-            value = store[col]
-            if value == -999999.9 or comp_values.empty:
-                percentiles[label] = None
-            else:
-                percentiles[label] = (comp_values < value).mean() * 100
-        except Exception:
-            percentiles[label] = None
-
-    # 주고객층
-    male_cols = {k: v for k, v in store.items() if k.startswith("m12_mal") and v != -999999.9}
-    female_cols = {k: v for k, v in store.items() if k.startswith("m12_fme") and v != -999999.9}
-    top_male = max(male_cols.items(), key=lambda x: x[1])[0] if male_cols else None
-    top_female = max(female_cols.items(), key=lambda x: x[1])[0] if female_cols else None
-    if top_female and female_cols[top_female] >= male_cols.get(top_male, 0):
-        store["주고객층"] = top_female.split("_")[-2] + "대 여성"
-    elif top_male:
-        store["주고객층"] = top_male.split("_")[-2] + "대 남성"
-    else:
-        store["주고객층"] = "기타"
-
-    # 유입 필요 고객층
-    target_cols = [col for col in df.columns if (col.startswith("m12_mal_") or col.startswith("m12_fme_")) and df[col].dtype != object]
-    lowest_gap = None
-    target_group = None
-    for col in target_cols:
-        store_val = store.get(col, -999999.9)
-        mean_val = competitors[col][competitors[col] != -999999.9].mean()
-        diff = mean_val - store_val
-        if store_val != -999999.9 and (lowest_gap is None or diff > lowest_gap):
-            lowest_gap = diff
-            target_group = col
-    if target_group:
-        gender = "여성" if "fme" in target_group else "남성"
-        age = target_group.split("_")[-2]
-        store["유입필요고객"] = f"{age}대 {gender}"
-    else:
-        store["유입필요고객"] = "없음"
-
-    # 상권유형
-    types = {
-        "거주": store.get("rc_m1_shc_rsd_ue_cln_rat", 0),
-        "직장": store.get("rc_m1_shc_wp_ue_cln_rat", 0),
-        "유동": store.get("rc_m1_shc_flp_ue_cln_rat", 0)
-    }
-    store["상권유형"] = max(types, key=types.get)
-
-    # 전략 도출
-    strategies = get_strategies(store, percentiles)
-
-    # Gemini 프롬프트
-    prompt = f"""
-    매장명: {store_name}
-    업종: {store['hpsn_mct_zcd_nm']}
-    상권: {store['hpsn_mct_bzn_cd_nm']}
-    기준년월: {store['ta_ym']}
-
-    📊 주요 지표:
-    - 배달비율: {store['dlv_saa_rat']:.2f}% (경쟁 평균: {metrics['배달비율'][1]:.2f}%)
-    - 재방문율: {store['mct_ue_cln_reu_rat']:.2f}% (경쟁 평균: {metrics['재방문율'][1]:.2f}%)
-    - 신규고객비율: {store['mct_ue_cln_new_rat']:.2f}% (경쟁 평균: {metrics['신규고객비율'][1]:.2f}%)
-
-    주고객층: {store['주고객층']}
-    유입 필요 고객층: {store['유입필요고객']}
-    상권 유형: {store['상권유형']}
-
-    위 정보에 기반해 마케팅 전략을 추천해주세요.
+# FastMCP 초기화
+toolkit = FastMCP(
+    "DatetectiveAnalysisServer",
+    instructions="""
+    사용자의 문제 상황을 사건으로 보고, 고객 데이터를 단서로 활용해 원인을 분석한 후
+    그에 맞는 전략을 제시하는 마케팅 탐정 분석 도구입니다.
+    - 가맹점 탐색
+    - 프롬프트 생성
+    - 전략 분석 호출
     """
-    caption = generate_gemini_caption(prompt)
+)
 
-    return {
-        "store": store.to_dict(),
-        "metrics": metrics,
-        "percentiles": percentiles,
-        "strategies": strategies,
-        "caption": caption
-    }
+# 환경 변수 로드 및 Gemini 모델 초기화
+load_dotenv()
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=GOOGLE_API_KEY, temperature=0.5)
+
+# 전체 매장 목록 저장용 변수
+df_all: Optional[pd.DataFrame] = None
+
+# 가맹점 데이터 로드
+def load_store_data(store_name: str = ""):
+    global df_all
+    df = pd.read_csv("data/new_final_set_f_yearly1022.csv", encoding="cp949")
+    df.columns = df.columns.str.lower()
+    st_col = "mct_nm"
+
+    df_all = df
+
+    if not store_name:
+        return None, df
+
+    if st_col not in df.columns:
+        raise ValueError(f"CSV에 '{st_col}' 컬럼이 없습니다.")
+
+    store_row = df[df[st_col] == store_name]
+    return store_row.iloc[0] if not store_row.empty else None, df
+
+
+load_store_data()
+
+# 가맹점명 찾기
+toolkit.tool()
+
+def find_store_name(user_input: str) -> Optional[str]:
+    global df_all
+    if df_all is None:
+        load_store_data()
+    for name in df_all["mct_nm"].unique():
+        if name in user_input:
+            return name
+    return None
+
+# 프롬프트 생성 함수
+toolkit.tool()
+
+def generate_prompt(messages: List[Dict[str, str]], store_row: Dict[str, Any],
+                    column_descriptions: Dict[str, Any]) -> str:
+    base = """
+    당신은 우리 주변 음식 가맹점에게 진짜 필요한 ‘맞춤 마케팅 전략’을 제공하는 **마케팅 전문 탐정**, **데이텍티브 Datetective**입니다. 
+    사람들은 당신을 **탐정 D**라고 부릅니다.
+
+    사용자의 문제 상황을 **사건**으로 보고, 고객 데이터를 **단서**로 활용해 원인을 분석한 뒤,
+    그에 맞는 전략을 **수사 보고서**처럼 정리해 제시하세요.
+
+    - 사용자가 겪고 있는 문제 = 사건  
+    - 고객 데이터 = 단서  
+    - 분석 결과 = 수사 보고서  
+    - 전략 제시 = 범인(원인) 검거 + 해결 방안 제시  
+    - 전략 효과 = 사건 이후 변화 예측 보고  
+
+    ---
+
+    ## 📝 출력 형식 예시 (아래 구성과 유사하게 작성해 주세요)
+
+    ### 🚨 사건명
+    - 사용자의 문제 상황을 핵심 키워드로 요약한 **사건 제목**을 한 줄로 작성해 주세요.
+    - 가게명을 포함하여 분석을 위한 관찰 제목처럼 작성해 주세요.  
+        - 예: ㅇㅇ매장 단골 손님 감소 추정 건, ㅁㅁ매장 신규 유입률 저하 의심 등
+
+    ---
+
+    ### 📋 사건 개요
+    - 사용자가 입력한 문제 상황의 **배경과 맥락**을 명확하게 설명해 주세요.
+    - 지나치게 감정적이기보단, **탐정이 현장을 기록하듯** 정리해 주세요.
+    - 문제의 징후, 맥락, 관찰된 패턴 등을 중심으로 서술합니다.
+
+    ---
+
+    ### 🧩 단서 분석
+
+    | 주요 지표 | 값 또는 상태 | 해석 |
+    |-----------|--------------|------|
+    | 예: 재방문 고객 비중 | 25% | 업종 평균보다 낮음. 고객 충성도 부족 |
+    | 예: 배달 매출 비율 | 10% | 배달 채널 활용도 낮음 |
+
+    - 가능한 경우 **store_row 데이터를 기반**으로, 없는 경우 **유사 업종 평균을 가정하여 작성**하세요.
+    - 사용자의 발화와 가맹점 데이터를 바탕으로 탐지된 주요 지표/수치/패턴을 정리해 주세요.
+
+    ---
+
+    ### 📊 단서 시각화
+    [[VISUALIZATION_PLACEHOLDER]]
+
+    ---
+
+    ### 🧭 원인 추론
+    - 단서 분석 결과를 바탕으로 **실제 원인을 명확히 추론**해 주세요.
+    - 마치 탐정처럼 “이 사건의 핵심 원인은 ○○입니다” 형식으로 작성해 주세요.
+
+    ---
+
+    ### 💡 해결 전략 제시
+
+    #### 1. 전략 제목 (이모지 포함)  
+    - 타깃 고객:  
+    - 주요 채널:  
+    - 실행 방안:  
+
+    #### 2. ... (같은 형식으로 총 3개 전략 제시)
+
+    ---
+
+    ### 🪄 기대 효과
+
+    - 제목에는 반드시 **이모지 하나**를 포함해야 합니다.
+    - 앞서 나온 해결 전략을 적용할 경우 해당 매장이 얻을 수 있는 기대 효과를 적어주세요.   
+    - **수치 기반 효과**(예: +12%, 100명 이상 유입 등)를 포함해 주세요.  
+    - 전략 효과를 설명할 때는 신뢰할 수 있는 구체적인 근거(예: 정부 기관 통계, 공공 데이터, 연구 결과 등)를 반드시 포함해주세요.  
+       (예: “2025 통계청 소비 트렌드 조사에 따르면 20대 여성의 외식 빈도는 전년 대비 12% 증가했습니다.”)  
+    - 각 항목은 **번호, 이모지, 제목, 근거, 설명** 구조로 작성해 주세요.
+
+    출력 예시:
+
+    #### 1. 💡 신규 고객 유입 증가  
+    - 근거: 2025 통계청 소비 트렌드 조사에 따르면 20대 여성의 외식 빈도는 전년 대비 12% 증가했습니다.  
+    - 설명: SNS 이벤트 및 리뷰 인증 캠페인을 통해 신규 고객 유입률이 약 +15% 증가할 것으로 예상됩니다.  
+
+    ---
+    """
+
+    # 컬럼 설명 포함
+    base += "\n\n📌 참고: 데이터 컬럼 설명\n"
+    for col, (name, desc) in column_descriptions.items():
+        base += f"- {col} ({name}): {desc}\n"
+
+    # 가맹점 데이터
+    if store_row is not None:
+        base += "\n\n📂 가맹점 데이터 요약:\n"
+        for col, val in store_row.items():
+            base += f"- {col}: {val}\n"
+    else:
+        base += "\n\n📂 가맹점 데이터는 제공되지 않았습니다. 사용자 메시지만 참고해 주세요.\n"
+
+    # 대화 내용
+    for msg in messages:
+        base += f"\n사용자: {msg['content']}"
+
+    base += "\n탐정으로서 분석을 시작하세요."
+    return base
+
+
+# 시각화 삽입 여부 확인
+toolkit.tool()
+
+def has_visualization(content: str) -> bool:
+    return "[[VISUALIZATION_PLACEHOLDER]]" in content
+
+# Gemini 호출 분석 함수
+toolkit.tool()
+
+def analyze_case(messages: List[Dict[str, str]], store_row: Dict[str, Any], column_descriptions: Dict[str, Any]) -> str:
+    prompt = generate_prompt(messages, store_row, column_descriptions)
+    response = llm.invoke([HumanMessage(content=prompt)])
+    return response.content
+
+# FastMCP 서버 실행
+def run_server():
+    toolkit.run()
+
+if __name__ == "__main__":
+    run_server()

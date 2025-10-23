@@ -4,6 +4,7 @@ __pycache__/
 
 # 환경 변수
 .env
+.venv/
 
 # IDE 설정
 .vscode/
@@ -11,3 +12,6 @@ __pycache__/
 
 # OS 파일
 .DS_Store
+
+# excel 임시 파일
+~$*
