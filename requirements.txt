@@ -4,7 +4,8 @@ plotly
 markdown
 python-dotenv
 reportlab
-langchain
-langchain-google-genai
+langchain>=0.1.13
+langchain-core>=0.1.32
+langchain-google-genai>=0.0.8
 google-generativeai
 fastmcp
