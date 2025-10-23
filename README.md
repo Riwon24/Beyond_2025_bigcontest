@@ -1,4 +1,5 @@
-# 🕵️ 탐정 D - Datetective : AI 마케팅 수사 챗봇 (2025 빅콘테스트 AI데이터 활용분야)
+# 🕵️ 탐정 D - Datetective : AI 마케팅 수사 챗봇 
+> 2025 빅콘테스트 AI데이터 활용분야
 
 **데이터와 추리가 만나는 곳, Data × Detective**  
 데이텍티브(Datetective)는 가맹점 데이터를 기반으로 마케팅 문제를 '사건'처럼 분석하고,   
@@ -6,7 +7,7 @@
 
 ---
 
-## 실행 결과 (서비스 웹 페이지)
+## 🌐 실행 결과 (서비스 웹 페이지)
 https://noonbora2025bigcontest.onrender.com/
 
 ---
@@ -41,7 +42,7 @@ https://noonbora2025bigcontest.onrender.com/
 
 ---
 
-## 핵심 기능
+## 🤖 핵심 기능
 
 | 기능                  | 설명 |
 |---------------------|------|
@@ -55,7 +56,7 @@ https://noonbora2025bigcontest.onrender.com/
 
 ---
 
-## 기술 스택
+## ⚙️ 기술 스택
 
 | 구분 | 사용 기술 | 설명 |
 |------|-----------|------|
@@ -67,7 +68,7 @@ https://noonbora2025bigcontest.onrender.com/
 
 ---
 
-## 프로젝트 구조
+## 🗂️ 프로젝트 구조
 
 ```bash
 main/
