@@ -7,11 +7,6 @@
 
 ---
 
-## 🌐 실행 결과 (서비스 웹 페이지)
-https://noonbora2025bigcontest.onrender.com/
-
----
-
 ## 👥 팀 소개  
 > ❄️ 팀명 : 눈보라
 
